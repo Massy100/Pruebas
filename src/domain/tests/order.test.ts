@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import { Order } from "../value-objects/Order/Order";
 import { CustomerId } from "../value-objects/Customer/CustomerId";
 import { OrderStatus } from "../value-objects/Order/OrderStatus";
+import { Money } from "../value-objects/Money/Money";
+import { Quantity } from "../value-objects/Product/Quantity";
+import { ProductId } from "../value-objects/Product/ProductId";
 
 // import { InvalidMoneyError } from "../shared/Errors";
 // import { OrderCreated, OrderConfirmed } from "./Events";
-// import { ProductId } from "../Product/ProductId";
-// import { Quantity } from "./Quantity";
-// import { Money } from "../shared/Money";
 // import { InvalidOrderStateError, EmptyOrderError, InvalidQuantityError } from "./Errors";
 
 describe('Order', ()=>{
@@ -18,7 +18,7 @@ describe('Order', ()=>{
 
             expect(order.getStatus()).toBe(OrderStatus.Draft);
             expect(order.getCustomerId()).toEqual(customerId);
-            expect(order.getItems).toHaveLength(0);
+            expect(order.getItems()).toHaveLength(0);
             expect(order).toBeDefined();
         });
 
@@ -31,40 +31,55 @@ describe('Order', ()=>{
         // });
     });
 
-    /*
+    
     describe('addItem', () => {
         it('adds item to order', () => {
             const order = createDraftOrder();
-            const productId = ProductId.from('prod-123');
-            const quantity = Quantity.create(2);
-            const price = Money.create('1', 100.00, 'USD');
+            const productId = ProductId.from('prod-123').getValue();  
+            const quantity = Quantity.create(2).getValue();           
+            const price = Money.create('1', 100.00, 'USD').getAmount(); 
+
+            order.addItem(productId, quantity, price);
+
+            expect(order.getItems()).toHaveLength(1);
+            expect(order.getItems()[0].getProductId()).toBe('prod-123');
+            expect(order.getItems()[0].getQuantity()).toBe(2);
+            expect(order.getItems()[0].getUnitPrice()).toBe(100.00);
         });
 
         it('increases quantity for existing item', () => {
             const order = createDraftOrder();
-            const productId = ProductId.from('prod-123');
-            const price = Money.create('1', 100.00, 'USD');
+            const productId = ProductId.from('prod-123').getValue(); 
+            const price = Money.create('1', 100.00, 'USD').getAmount(); 
 
-            order.addItem(productId, Quantity.create(2), price);
-            order.addItem(productId, Quantity.create(3), price);
+            order.addItem(productId, 2, price);
+            order.addItem(productId, 3, price);
 
-            expect(order.items()).toHaveLength(1);
-            expect(order.items()[0].quantity().value).toBe(5);
+            expect(order.getItems()).toHaveLength(1);
+            expect(order.getItems()[0].getQuantity()).toBe(5);
         });
-
+       
         it('throws when order is cancelled', () => {
             const order = createCancelledOrder();
 
-            expect(() => order.addItem(ProductId.from('prod-123'), Quantity.create(2), Money.create('1', 100.00, 'USD'))).toThrow(InvalidOrderStateError);
+            expect(() => order.addItem(
+                ProductId.from('prod-123').getValue(), 
+                2, 
+                Money.create('1', 100.00, 'USD').getAmount()
+            )).toThrow();
         });
 
         it('throws when quantity is zero', () => {
             const order = createDraftOrder();
             
-            expect(() => order.addItem(ProductId.from('prod-123'), Quantity.create(0), Money.create('1', 100.00, 'USD'))).toThrow(InvalidQuantityError);
+            expect(() => order.addItem(
+                ProductId.from('prod-123').getValue(), 
+                0, 
+                Money.create('1', 100.00, 'USD').getAmount()
+            )).toThrow();
         });
     });
-
+     /*
     describe('confirm', () => {
         it('changes status to confirmed', () => {
             const order = createDraftOrder();
@@ -108,25 +123,33 @@ describe('Order', ()=>{
             expect(total.getCurrency()).toBe('USD');
         });
     });
+    */
 
     // helpers
     function createDraftOrder(): Order {
         const customerId = CustomerId.create('cust-123');
         const order = Order.create(customerId);
-        // Agregar items si es necesario
-        return order;
-    }
-
-    function createOrderWithItems(): Order {
-        const order = createDraftOrder();
-        // order.addItem(...)
         return order;
     }
 
     function createCancelledOrder(): Order {
         const order = createDraftOrder();
-        order.cancel();
+        order.cancel('Test cancellation');
         return order;
     }
-    */
+
+    // function createConfirmedOrder(): Order {
+    //     const order = createOrderWithItems();
+    //     order.setShippingAddress(createTestAddress())
+    //     order.confirm();
+    //     return order;
+    // }
+
+    // function createOrderWithItems(): Order {
+    //     const order = createDraftOrder();
+    //     order.addItem('prod-123', 2, 100.00);
+    //     order.addItem('prod-456', 1, 50.00);
+    //     return order;
+    // }
+    
 });
