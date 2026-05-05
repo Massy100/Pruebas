@@ -1,6 +1,6 @@
 import type { Product } from "../../interfaces/Product";
 
-export class MockProductRepository {
+export class inMemoryProductRepository {
     private products: Map<string, Product> = new Map();
 
     async findById(productId: string): Promise<Product | null> {

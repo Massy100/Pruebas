@@ -1,7 +1,7 @@
 import { OrderId } from "../../../domain/value-objects/Order/OrderId";
 import type { Order } from "../../interfaces/Order";
 
-export class MockOrderRepository {
+export class inMemoryOrderRepository {
     private orders: Map<string, Order> = new Map();
 
     async save(order: Order): Promise<void> {

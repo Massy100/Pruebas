@@ -1,106 +1,26 @@
 import { OrderId } from "../../../domain/value-objects/Order/OrderId";
-import { MockOrderRepository } from "../../mock/repositories/MockOrderRepository";
-import { MockProductRepository } from "../../mock/repositories/MockProductRepository";
-import { MockEventPublisher } from "../../mock/events/MockEventPublisher";
-
-export interface PlaceOrderCommand {
-    customerId: string;
-    items: {
-        productId: string;
-        quantity: number;
-    }[];
-}
-
-export interface OrderItem {
-    getProductId(): string;
-    getQuantity(): number;
-    getUnitPrice(): number;
-}
-
-export class OrderItemImpl implements OrderItem {
-    private productId: string;
-    private quantity: number;
-    private unitPrice: number;
-
-    constructor(productId: string, quantity: number, unitPrice: number) {
-        this.productId = productId;
-        this.quantity = quantity;
-        this.unitPrice = unitPrice;
-    }
-
-    getProductId(): string {
-        return this.productId;
-    }
-
-    getQuantity(): number {
-        return this.quantity;
-    }
-
-    getUnitPrice(): number {
-        return this.unitPrice;
-    }
-}
-
-export interface Order {
-    getId(): OrderId;
-    getCustomerId(): string;
-    getItems(): OrderItem[];
-    getTotal(): number;
-    getStatus(): string;
-}
-
-export class OrderImpl implements Order {
-    private id: OrderId;
-    private status: string = 'PENDING';
-    private customerId: string;
-    private items: OrderItem[];
-
-    constructor(customerId: string, items: OrderItem[], id?: OrderId) {
-        this.customerId = customerId;
-        this.items = items;
-        this.id = id || OrderId.generate();
-    }
-
-    getId(): OrderId {
-        return this.id;
-    }
-
-    getCustomerId(): string {
-        return this.customerId;
-    }
-
-    getItems(): OrderItem[] {
-        return [...this.items];
-    }
-
-    getTotal(): number {
-        return this.items.reduce((total, item) => {
-            return total + (item.getUnitPrice() * item.getQuantity());
-        }, 0);
-    }
-
-    getStatus(): string {
-        return this.status;
-    }
-
-    confirm(): void {
-        this.status = 'CONFIRMED';
-    }
-
-    cancel(): void {
-        this.status = 'CANCELLED';
-    }
-}
+import { inMemoryOrderRepository } from "../repositories/inMemoryOrderRepository"
+import { inMemoryProductRepository } from "../repositories/inMemoryProductRepository"
+import type { OrderItem } from "../../interfaces/OrderItem";
+import type { Order } from "../../interfaces/Order";
+import type { PlaceOrderCommand } from "../../interfaces/PlaceOrderCommand";
+import { OrderUseCase } from "./OrderUseCase";
+import { OrderItemUseCase } from "./OrderItemUseCase";
+import type { OrderPlacedEvent } from "../event/OrderPlacedEvent";
 
 export class PlaceOrderUseCase {
-    private orderRepository: MockOrderRepository;
-    private productRepository: MockProductRepository;
-    private eventPublisher: MockEventPublisher;
+    private orderRepository: inMemoryOrderRepository;
+    private productRepository: inMemoryProductRepository;
+    private eventPublisher: {
+        publish(event: OrderPlacedEvent): Promise<void>;
+    };
 
     constructor(
-        orderRepository: MockOrderRepository,
-        productRepository: MockProductRepository,
-        eventPublisher: MockEventPublisher
+        orderRepository: inMemoryOrderRepository,
+        productRepository: inMemoryProductRepository,
+        eventPublisher: {
+            publish(event: OrderPlacedEvent): Promise<void>;
+        }
     ) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
@@ -125,18 +45,23 @@ export class PlaceOrderUseCase {
                 throw new Error(`Quantity for product ${item.productId} must be greater than 0`);
             }
 
-            orderItems.push(new OrderItemImpl(
+            if (product.stock !== undefined && item.quantity > product.stock) {
+                throw new Error(`Insufficient stock for product ${item.productId}. Available: ${product.stock}, Requested: ${item.quantity}`);
+            }
+
+            const orderItem = new OrderItemUseCase(
                 item.productId,
                 item.quantity,
                 product.price
-            ));
+            );
+            orderItems.push(orderItem);
         }
 
-        const order = new OrderImpl(command.customerId, orderItems);
+        const order = new OrderUseCase(command.customerId, orderItems);
         
         await this.orderRepository.save(order);
         
-        await this.eventPublisher.publish({
+        const orderPlacedEvent: OrderPlacedEvent = {
             eventName: 'OrderPlaced',
             occurredAt: new Date(),
             aggregateId: order.getId().toString(),
@@ -150,12 +75,27 @@ export class PlaceOrderUseCase {
                     unitPrice: item.getUnitPrice()
                 }))
             }
-        });
+        };
+        
+        await this.eventPublisher.publish(orderPlacedEvent);
 
         return order.getId().toString();
     }
 
     async getOrder(orderId: string): Promise<Order | null> {
-        return this.orderRepository.findById(OrderId.from(orderId));
+        try {
+            const order = await this.orderRepository.findById(OrderId.from(orderId));
+            return order;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    async updateProductStock(productId: string, quantity: number): Promise<void> {
+        const product = await this.productRepository.findById(productId);
+        if (product && product.stock !== undefined) {
+            product.stock -= quantity;
+            await this.productRepository.update(product);
+        }
     }
 }
