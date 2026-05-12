@@ -1,6 +1,9 @@
 import type { Product } from "../../interfaces/Product";
+import { injectable } from "inversify";
+import type { ProductRepository } from "../../interfaces/ProductRepository";
 
-export class inMemoryProductRepository {
+@injectable()
+export class inMemoryProductRepository implements ProductRepository{
     private products: Map<string, Product> = new Map();
 
     async findById(productId: string): Promise<Product | null> {

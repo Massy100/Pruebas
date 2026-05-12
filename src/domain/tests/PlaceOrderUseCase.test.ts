@@ -1,9 +1,15 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { PlaceOrderUseCase } from "../../app/order/use-cases/PlaceOrderUseCase";
 import type { PlaceOrderCommand } from "../../app/interfaces/PlaceOrderCommand";
-import { inMemoryOrderRepository } from "../../app/order/repositories/inMemoryOrderRepository";
-import { inMemoryProductRepository } from "../../app/order/repositories/inMemoryProductRepository";
+
 import { OrderId } from "../value-objects/Order/OrderId";
+
+
+import type { OrderRepository } from "../../app/interfaces/OrderRepository";
+import type { ProductRepository } from "../../app/interfaces/ProductRepository";
+import { testContainer } from "../infrastructure/inversify.test.config";
+import { TYPES } from "../infrastructure/types";
+import type { MockEventPublisher } from "../../app/mock/events/MockEventPublisher";
 
 class TestEventPublisher {
     public publishedEvents: any[] = [];
@@ -19,15 +25,15 @@ class TestEventPublisher {
 
 describe('PlaceOrderUseCase', () => {
     let handler: PlaceOrderUseCase;
-    let orderRepo: inMemoryOrderRepository;
-    let productRepo: inMemoryProductRepository;
-    let eventPublisher: TestEventPublisher;
+    let orderRepo: OrderRepository;
+    let productRepo: ProductRepository;
+    let eventPublisher: MockEventPublisher;
 
     beforeEach(() => {
-        orderRepo = new inMemoryOrderRepository();
-        productRepo = new inMemoryProductRepository();
-        eventPublisher = new TestEventPublisher();
-        handler = new PlaceOrderUseCase(orderRepo, productRepo, eventPublisher);
+        orderRepo = testContainer.get(TYPES.OrderRepository);
+        productRepo = testContainer.get(TYPES.ProductRepository);
+        eventPublisher = testContainer.get(TYPES.EventPublisher);
+        handler = testContainer.get(TYPES.PlaceOrderUseCase);
     });
 
     it('creates order with items and saves', async () => {
@@ -103,6 +109,8 @@ describe('PlaceOrderUseCase', () => {
     });
 
     it('should publish event when order is created', async () => {
+        //FIX
+        eventPublisher.clearEvents();
         await productRepo.save({ id: 'prod-1', price: 10.00, stock: 10 });
         
         const command: PlaceOrderCommand = {
@@ -171,6 +179,9 @@ describe('PlaceOrderUseCase', () => {
     });
 
     it('should handle multiple orders correctly', async () => {
+        //FIX
+        orderRepo.clear();
+
         await productRepo.save({ id: 'prod-1', price: 10.00, stock: 20 });
         
         const command1: PlaceOrderCommand = {

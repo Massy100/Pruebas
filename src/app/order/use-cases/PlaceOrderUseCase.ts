@@ -1,6 +1,5 @@
 import { OrderId } from "../../../domain/value-objects/Order/OrderId";
-import { inMemoryOrderRepository } from "../repositories/inMemoryOrderRepository"
-import { inMemoryProductRepository } from "../repositories/inMemoryProductRepository"
+import type { OrderRepository } from "../../interfaces/OrderRepository";
 import type { OrderItem } from "../../interfaces/OrderItem";
 import type { Order } from "../../interfaces/Order";
 import type { PlaceOrderCommand } from "../../interfaces/PlaceOrderCommand";
@@ -8,17 +7,18 @@ import { OrderUseCase } from "./OrderUseCase";
 import { OrderItemUseCase } from "./OrderItemUseCase";
 import type { OrderPlacedEvent } from "../event/OrderPlacedEvent";
 
-export class PlaceOrderUseCase {
-    private orderRepository: inMemoryOrderRepository;
-    private productRepository: inMemoryProductRepository;
-    private eventPublisher: {
-        publish(event: OrderPlacedEvent): Promise<void>;
-    };
+import { TYPES } from "../../../domain/infrastructure/types";
+import { inject, injectable } from "inversify";
+import type { ProductRepository } from "../../interfaces/ProductRepository";
 
+@injectable()
+export class PlaceOrderUseCase {
+    
     constructor(
-        orderRepository: inMemoryOrderRepository,
-        productRepository: inMemoryProductRepository,
-        eventPublisher: {
+        @inject(TYPES.OrderRepository)  private  orderRepository: OrderRepository,
+        @inject(TYPES.ProductRepository) private productRepository: ProductRepository,
+        @inject(TYPES.EventPublisher) 
+        private eventPublisher: {
             publish(event: OrderPlacedEvent): Promise<void>;
         }
     ) {

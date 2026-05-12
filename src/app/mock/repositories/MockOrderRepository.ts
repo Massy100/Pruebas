@@ -1,7 +1,10 @@
 import { OrderId } from "../../../domain/value-objects/Order/OrderId";
 import type { Order } from "../../interfaces/Order";
+import { injectable } from "inversify";
+import type { OrderRepository } from "../../interfaces/OrderRepository";
 
-export class MockOrderRepository {
+@injectable()
+export class MockOrderRepository implements OrderRepository {
     private orders: Map<string, Order> = new Map();
 
     async save(order: Order): Promise<void> {

@@ -1,5 +1,7 @@
 import type { Product } from "../../interfaces/Product";
+import { injectable } from "inversify";
 
+@injectable()
 export class MockProductRepository {
     private products: Map<string, Product> = new Map();
 

@@ -7,11 +7,9 @@ import { PlaceOrderUseCase } from '../../app/order/use-cases/PlaceOrderUseCase';
 
 const productContainer = new Container();
 
-productContainer.bind(TYPES.OrderRepository).to(inMemoryOrderRepository);
-productContainer.bind(TYPES.ProductRepository).to(inMemoryProductRepository);
-
-productContainer.bind(TYPES.EventPublisher).to(MockEventPublisher);
-
-productContainer.bind(TYPES.PlaceOrderUseCase).to(PlaceOrderUseCase);
+productContainer.bind(TYPES.OrderRepository).to(inMemoryOrderRepository).inSingletonScope();
+productContainer.bind(TYPES.ProductRepository).to(inMemoryProductRepository).inSingletonScope();
+productContainer.bind(TYPES.EventPublisher).to(MockEventPublisher).inSingletonScope();
+productContainer.bind(TYPES.PlaceOrderUseCase).to(PlaceOrderUseCase).inSingletonScope();
 
 export { productContainer };

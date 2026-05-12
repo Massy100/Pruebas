@@ -1,3 +1,5 @@
+import { injectable } from "inversify";
+
 export interface DomainEvent {
     eventName: string;
     occurredAt: Date;
@@ -5,6 +7,7 @@ export interface DomainEvent {
     data: any;
 }
 
+@injectable()
 export class MockEventPublisher {
     public publishedEvents: DomainEvent[] = [];
 
